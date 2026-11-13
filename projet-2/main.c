@@ -47,11 +47,17 @@ char grid(char **tab)
     }
 }
 
-int choix(int nombre) {
-
+int joueurs(char **str1)
+{
+    int joueur;
+    int ligne;
+    int colonne;
+    while (true)
+    {
+    }
 }
 
-int main()
+void tableau()
 {
     printf("\n Bienvenu dans Tic Tac Toe !\n");
     printf("Voici la grille : \n");
@@ -61,5 +67,10 @@ int main()
     tab[1] = str_cpy("3 | 4 | 5");
     tab[2] = str_cpy("6 | 7 | 8");
     grid(tab);
-    
+    return tableau;
+}
+
+int main()
+{
+    tableau()
 }
