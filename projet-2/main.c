@@ -44,6 +44,49 @@ void grid(char **tab)
     }
 }
 
+int case_libre(char **tab, int choix) // aide n°2 cf : coda-bnv-s2/projet-2/AIDE_EXTERIEURE.md
+{
+    int ligne = choix / 3;
+    int colonne = (choix % 3) * 4;
+    if (tab[ligne][colonne] != 'X' && tab[ligne][colonne] != 'O')
+        return (1);
+    return (0);
+}
+
+void joueur(char **tab)
+{
+    int choix = 0;
+    int ligne;
+    int colonne;
+    printf("\nVotre tour (X). Choisissez une case libre entre 0 a 8 : ");
+    scanf("%d", &choix);
+    while (choix < 0 || choix > 8 || case_libre(tab, choix) == 0)
+    {
+        printf("Erreur,\nil faut que vous choisissiez un nombre entre 0 et 8 reessayez : ");
+        scanf("%d", &choix);
+    }
+    ligne = choix / 3;
+    colonne = (choix % 3) * 4;
+    tab[ligne][colonne] = 'X';
+    printf("\n");
+    grid(tab);
+}
+
+void ordinateur(char **tab)
+{
+    int choix;
+    int ligne;
+    int colonne;
+    choix = rand() % 9; // nombre au hasard, solution trouver sur google et utiliser la 1er semaine. la recherche : "en C, comment faire en sorte d'afficher un nombre aleatoire dans un tableau en 2D en 3 par 3 ? avec les boucles whiles"
+    while (case_libre(tab, choix) == 0)
+        choix = rand() % 9;
+    ligne = choix / 3;
+    colonne = (choix % 3) * 4;
+    tab[ligne][colonne] = 'O';
+    printf("Le bot joue la case %d :\n\n", choix);
+    grid(tab);
+}
+
 int main()
 {
     char **tab = malloc(4 * sizeof(*tab));
@@ -57,6 +100,8 @@ int main()
     printf("Vous jouez les X, le bot joue les O.\n");
     printf("Les cases sont numerotees de 0 a 8.\n\n");
     grid(tab);
+    joueur(tab);
+    ordinateur(tab);
     int i = 0;
     while (tab[i] != NULL)
     {
