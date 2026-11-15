@@ -221,3 +221,136 @@ Pour l'instant tu n'as aucune fonction qui détecte ça. Deux façons d'avancer,
   grille n'est pas pleine.
 
 Mon conseil : commence par la version avec le compteur de coups pour voir une pars ajoute la détection de victoire. Essaie, compile, et reviens me voir avec lerésultat (ou l'erreur 😄).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## 4eme aides ##
+
+j'ai demandé a GLM-5.2 : 
+
+- voici ma fonction gagne : [Pasted text #2 +29 lines] comment j'utilise le parametre symboles, et mon code compile mais je peux jouer qu'un fois puis ensuite quand je
+  bot joue, ca fait un boucle infini. je veux que tu me m'aide a comprendre ce qu'il ne va pas.
+
+Mon ancienne function gagne : 
+int gagne(char **tab, char symbole)
+{
+    int i = 0;
+    while (i < 3)
+    {
+        if (tab[i][0] == tab[i][4] && tab[i][4] == tab[i][8])
+        {
+            return (1);
+            i++;
+        }
+    }
+    i = 0;
+    while (i < 3)
+    {
+        if (tab[0][i * 4] == tab[1][i * 4] && tab[1][i * 4] == tab[2][i * 4])
+        {
+            return (1);
+            i++;
+        }
+    }
+    if (tab[0][0] == tab[1][4] && tab[1][4] == tab[2][8])
+    {
+        return (1);
+    }
+    if (tab[0][8] == tab[1][4] && tab[1][4] == tab[2][0])
+    {
+        return (1);
+    }
+    return (0);
+}
+
+
+Sa réponse :
+- J'ai relu ton fichier — je vois exactement ce qui se passe. Bonne nouvelle : tes deux symptômes (« je ne joue qu'une fois » et « boucle infinie après le coup du bot ») viennent de problèmes précis que je peux te montrer un par un. Il y en a trois, bien distincts.
+
+🐛 Problème 1 : la boucle infinie — c'est le i++, et il est toujours là
+
+Ta fonction gagne (lignes 92-100) est identique à celle d'avant : les corrections qu'on a décrites n'ont pas été appliquées dans le fichier. Et voici la preuve que c'est bien lui qui gèle ton programme.
+
+Regarde l'ordre dans ton main :
+
+joueur(tab);        // 1. tu joues ✓
+ordinateur(tab);    // 2. le bot joue ✓ (et s'affiche)
+...free...          // 3. libération
+gagne(tab, 'X');    // 4. ← LE PROGRAMME GÈLE ICI
+
+Ton ressenti « ça boucle quand le bot a joué » est en fait : le bot joue, s'affiche... et le programme gèle juste après, dans l'appel à gagne. Faisons le déroulé de gagne sur une grille sans gagnant :
+
+┌────────────────┬────────┬────────────────────────────────┬───────────────────────────────────────────────────────┐
+│ Tour de boucle │ i vaut │ La ligne 0 est-elle gagnante ? │                   Que se passe-t-il                   │
+├────────────────┼────────┼────────────────────────────────┼───────────────────────────────────────────────────────┤
+│ 1              │ 0      │ non                            │ le if est faux → on saute son contenu (dont le i++ !) │
+├────────────────┼────────┼────────────────────────────────┼───────────────────────────────────────────────────────┤
+│ 2              │ 0      │ non                            │ pareil                                                │
+├────────────────┼────────┼────────────────────────────────┼───────────────────────────────────────────────────────┤
+│ 3              │ 0      │ non                            │ pareil                                                │
+├────────────────┼────────┼────────────────────────────────┼───────────────────────────────────────────────────────┤
+│ ... à l'infini │ 0      │ non                            │ i ne change jamais → while (i < 3) toujours vrai      │
+└────────────────┴────────┴────────────────────────────────┴───────────────────────────────────────────────────────┘
+
+La correction (déjà donnée, là tu la recopies en la comprenant) :
+
+int i = 0;
+while (i < 3)
+{
+    if (tab[i][0] == symbole && tab[i][4] == symbole && tab[i][8] == symbole)
+        return (1);
+    i++;                      // ← HORS du if : exécuté à chaque tour, gagnant ou pas
+}
+
+À faire deux fois (boucle des lignes, boucle des colonnes).
+
+Et retiens la leçon qui va avec : « ça compile » veut seulement dire « la syntaxe est valide ». Le compilateur ne détecte ni les boucles infinies, ni la logique fausse. C'est le déroulé mental (étape 6 de notre méthode !) qui les attrape.
+
+📝 Problème 2 : comment utiliser symbole — c'est une transformation toute bête
+
+Ton test actuel compare les cases entre elles :
+
+tab[i][0] == tab[i][4] && tab[i][4] == tab[i][8]     // « les 3 cases sont pareilles »
+
+Pour utiliser le paramètre, tu compares chaque case au symbole :
+
+tab[i][0] == symbole && tab[i][4] == symbole && tab[i][8] == symbole
+// « la case gauche EST le symbole ET la milieu EST le symbole ET la droite EST le symbole »
+
+C'est littéralement le même motif où tu remplaces les comparaisons entre cases par des comparaisons avec symbole. Tu l'appliques aux 4 tests : boucle des lignes, boucle des colonnes, les deux diagonales. (Tu as le modèle complet dans le bloc du problème 1.)
+
+Résultat : gagne(tab, 'X') répondra 1 seulement si trois X sont alignés, gagne(tab, 'O') seulement pour trois O.
+
+📍 Problème 3 : dans le main, gagne est appelée au mauvais endroit
+
+Ligne 142 :
+
+while (tab[i] != NULL) { free(tab[i]); i++; }   // les chaînes sont libérées...
+gagne(tab, 'X');                                // ...et utilisées juste après ❌
+
+Deux erreurs en une :
+
+1. Use-after-free, le retour ! Tu appelles gagne après avoir libéré les chaînes — le même bug que pour le segfault de tout à l'heure. La libération doit rester la toute dernière chose, après TOUT le reste.
+2. Le résultat est jeté à la poubelle. gagne(tab, 'X'); seul ne fait rien : la fonction calcule 1 ou 0... et personne ne le lit. Un return sans if ni while autour pour l'utiliser, c'est comme demander l'heure à quelqu'un et ne pas écouter la réponse.
+
+🎯 Ton plan d'action, dans l'ordre
+
+1. ☐ Dans gagne : sortir les deux i++ du if (règle le gel)
+2. ☐ Dans gagne : remplacer les 4 tests par la version == symbole (utilise le paramètre)
+3. ☐ Dans main : supprimer la ligne gagne(tab, 'X'); ligne 142 (elle est mal placée et inutile telle quelle)
+4. ☐ Garder les free tout à la fin, juste avant return (0)
+5. ☐ Compiler, tester : tu dois pouvoir jouer un coup, le bot joue, programme se ferme proprement
+6. ☐ Ensuite seulement : construire la boucle de jeu — while (gagne(tab,'X') == 0 && gagne(tab,'O') == 0 && coups < 9) avec joueur et ordinateur dedans, et les free après la boucle
+
+Fais les étapes 1 à 5, et montre-moi ton main quand tu attaqueras la boucle (étape 6) — c'est elle qui réglera ton « je ne joue qu'une fois ». 💪
