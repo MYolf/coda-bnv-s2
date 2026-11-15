@@ -1,8 +1,6 @@
 #ifndef __FUNCTIONS_H__
 #define __FUNCTIONS_H__
 
-// les prototypes de mes fonctions
-
 int str_len(char *str);
 char *str_cpy(char *str);
 void grid(char **tab);
